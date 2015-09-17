@@ -1,0 +1,4 @@
+*.bin
+*.npy
+*.gz
+eng_news_2013*

@@ -1,0 +1,5 @@
+requests
+gensim
+Levenshtein
+titlecase
+nltk.stem
