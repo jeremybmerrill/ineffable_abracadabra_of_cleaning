@@ -1,5 +1,6 @@
 requests
 gensim
-Levenshtein
+python-Levenshtein
 titlecase
-nltk.stem
+nltk
+flask

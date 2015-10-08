@@ -19,6 +19,9 @@ see this interactive word2vec model: http://radimrehurek.com/2014/02/word2vec-tu
 TODO: wordnik has a huge API, might help doing the stem -> conjugated form
 http://developer.wordnik.com/docs.html#!/word/getRelatedWords_get_4
 
+Themed book titles
+"What if Harry Potter was about artists"
+
 Corpora
 ========
 
