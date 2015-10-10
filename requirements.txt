@@ -4,3 +4,5 @@ python-Levenshtein
 titlecase
 nltk
 flask
+twitter
+pyyaml

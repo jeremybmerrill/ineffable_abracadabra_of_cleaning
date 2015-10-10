@@ -86,9 +86,12 @@ class TreebankWordTokenizer(TokenizerI):
 
       text = re.sub(r"([^' ])('[sS]|'[mM]|'[dD]|') ", r"\1 \2 ", text)
 
-      # Jeremy's only modification is commenting this out -- don't separate out contractions
+      # Jeremy's modification is commenting this out -- don't separate out contractions
       # text = re.sub(r"([^' ])('ll|'LL|'re|'RE|'ve|'VE|n't|N'T) ", r"\1 \2 ",
       #               text)
+
+      # Jeremy's modification, to split words at hyphens.
+      text = re.sub(r"-", " - ", text)
 
       for regexp in self.CONTRACTIONS2:
           text = regexp.sub(r' \1 \2 ', text)

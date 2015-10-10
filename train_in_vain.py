@@ -16,8 +16,10 @@ sentences_filename = "nyt/taggerAPI/sentences.txt"
 start = datetime.now()
 print("start training w2v " + str(start))
 
+# import re
 # apostrophe_tests = {
-#   "'ere" : True,
+#   "'ere" : False,
+#   "'geez": False,
 #   "can't" : True,
 #   "would've" : True,
 #   "cheese": True,
@@ -34,7 +36,7 @@ print("start training w2v " + str(start))
 class MySentences(object):
   def __init__(self, filename):
     self.filename = filename
-    self.alpha_re = re.compile("^[a-zA-Z]*'?[a-zA-Z]*$") # allow single apostrophes but not double apostrophes: note, this doesn't allow 'ere
+    self.alpha_re = re.compile("^[a-zA-Z]+'?[a-zA-Z]*$") # allow single apostrophes but not double apostrophes: note, this doesn't allow 'ere
     if stemming: 
       self.stemmer = PorterStemmer()
     self.treebank_word_tokenizer = TreebankWordTokenizer()
