@@ -280,13 +280,16 @@ def get_titles_from_nyt_api():
   resp = requests.get("http://api.nytimes.com/svc/books/v2/lists/overview.json?api-key=" + api_keys["nyt"]).json()
   # [u'Combined Print and E-Book Fiction', u'Combined Print and E-Book Nonfiction', u'Hardcover Fiction', u'Hardcover Nonfiction', u'Trade Fiction Paperback', u'Mass Market Paperback', u'Paperback Nonfiction', u'E-Book Fiction', u'E-Book Nonfiction', u'Advice How-To and Miscellaneous', u'Picture Books', u'Childrens Middle Grade Hardcover', u'Childrens Middle Grade Paperback', u'Childrens Middle Grade E-Book', u'Young Adult Hardcover', u'Young Adult Paperback', u'Young Adult E-Book', u'Series Books', u'Hardcover Graphic Books', u'Paperback Graphic Books', u'Manga', u'Animals', u'Business Books', u'Crime and Punishment', u'Culture', u'Education', u'Family', u'Fashion Manners and Customs', u'Humor', u'Hardcover Political Books', u'Relationships', u'Science', u'Travel']
   eligible_books = [item for sublist in [[merge_dicts(book,  {"list_name": l["list_name"]}) for book in l["books"] if book["title"].count(" ") > 3 and "vol." not in book["title"].lower()] for l in resp["results"]["lists"] if l["list_name"] not in ["Games and Activities"] ] for item in sublist]
-  return choice(eligible_books)
+  return [(book["title"], book["author"]) for book in eligible_books]
 
 def get_titles_from_wikipedia_csv():
   titles = []
-  with open("bestselling books.csv") as f:
-    for line in enumerate(f):
-      titles.append(line)
+  with open('bestselling books.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+      # "Book","Author(s)","Original language","First published","Approximate sales"
+      if row["Book"].count(" ") > 3:
+        titles.append((row["Book"], row["Author(s)"]))
   return titles
 
 
@@ -295,11 +298,11 @@ def get_titles_from_book_titles_dot_text():
   with open("book_titles.txt") as f:
     for line in enumerate(f):
       titles.append(line)
-  return titles
+  return [(title, "?") for title in titles]
 
 def get_candidate_titles():
-  if len(sys.argv) > 1:
-    return sys.argv[1]
+  if len(sys.argv) > 2:
+    return (sys.argv[1], sys.argv[2])
   elif False:
     return get_titles_from_book_titles_dot_text()
   elif False:
@@ -324,16 +327,16 @@ def do():
     return jokes
   elif True: # pick a book title from the NYT bestsellers API and make a joke title from it
     book = choice(get_candidate_titles())
-    joke_title = rephrase(book["title"].lower())
+    joke_title = rephrase(book[0].lower())
     print(book)
-    return "What %s should write next: \n\n%s" % (book["author"], joke_title)
+    return "What %s should write next: \n\n%s" % (book[1], joke_title)
   elif False: #rephrase it with a random theme (but the themes don't actually work)
     book = choice(get_candidate_titles())
     theme = choice(["art", "music", "pop", "history", "politics", "sex", "fashion", "food", "travel" ])
-    joke_title = rephrase(book["title"].lower(), theme)
+    joke_title = rephrase(book[0].lower(), theme)
     print(book)
-    return "What if %s was about %s: \n\n%s" % (book["title"], theme, joke_title)
+    return "What if %s was about %s: \n\n%s" % (book[0], theme, joke_title)
 
 
 if __name__ == "__main__":
-  do()
+  print do()
