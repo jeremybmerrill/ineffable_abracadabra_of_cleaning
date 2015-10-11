@@ -16,7 +16,7 @@ try:
   model_filepath = sys.argv[1]
 except IndexError:
   print("using default model")
-  model_filepath = 'slightly_wrong_apostrophes.bin'
+  model_filepath = 'model_sentences_raw_words_min_count_50_size_200_downsampling_0.001.bin'
 print("using model from " + model_filepath)
 w2v_model = Word2Vec.load(model_filepath)  # C binary format
 
