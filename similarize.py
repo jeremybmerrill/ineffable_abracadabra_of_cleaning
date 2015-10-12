@@ -79,7 +79,8 @@ def merge_dicts(*dict_args):
 
 
 stopwords = ["Harry Potter", "Harry", "Potter", "how", "where"]
-with open("stopwords.txt") as f:
+stopwords_filename = os.path.join(current_dir, 'stopwords.txt')
+with open(stopwords_filename) as f:
   for line in f:
     stopwords.append(line.strip())
 non_alpha_chars = re.compile("[\W]+")
@@ -286,7 +287,8 @@ def get_titles_from_nyt_api():
 
 def get_titles_from_wikipedia_csv():
   titles = []
-  with open('bestselling books.csv') as csvfile:
+  bestselling_books_filename = os.path.join(current_dir, 'bestselling books.csv')
+  with open(bestselling_books_filename) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
       # "Book","Author(s)","Original language","First published","Approximate sales"
@@ -297,7 +299,8 @@ def get_titles_from_wikipedia_csv():
 
 def get_titles_from_book_titles_dot_text():
   titles = []
-  with open("book_titles.txt") as f:
+  book_titles_filename = os.path.join(current_dir, 'book_titles.txt')
+  with open(book_titles_filename) as f:
     for line in enumerate(f):
       titles.append(line)
   return [(title, "?") for title in titles]
