@@ -4,6 +4,7 @@ from datetime import datetime
 import gensim
 from  gensim.models import Word2Vec
 import sys
+import os
 
 w2v_api = Flask(__name__)
 
