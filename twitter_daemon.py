@@ -28,7 +28,7 @@ with open(twitter_creds_filename, 'r') as f:
 while True:
   now  = datetime.now()
   print("what time is it? it's %i:%i" % (now.hour, now.minute))
-  if (now.hour == 9 or now.hour == 16) and now.minute > 0 and now.minute < 10:
+  if (now.hour == 10 or now.hour == 16) and now.minute >= 0 and now.minute < 10:
     joke = similarize.do()
     if len(joke) < 140:
       t.statuses.update(status=joke)
