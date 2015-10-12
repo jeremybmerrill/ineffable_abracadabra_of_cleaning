@@ -6,6 +6,7 @@ from twitter import *
 import yaml
 from time import sleep
 from datetime import datetime
+import os
 
 def api_thread():
     w2v_api.run()
@@ -18,7 +19,9 @@ threads.append(t)
 t.start()
 
 #once the API is started, get twitter creds, generate a joke, tweet it, then sleep
-with open('twitter_creds.secret', 'r') as f:
+current_dir = os.path.dirname(__file__)
+twitter_creds_filename = os.path.join(current_dir, 'twitter_creds.secret')
+with open(twitter_creds_filename, 'r') as f:
   creds = yaml.load(f)
   t = Twitter(auth=OAuth(creds["token"], creds["secret"], creds["consumer_key"], creds["consumer_secret"]))
 

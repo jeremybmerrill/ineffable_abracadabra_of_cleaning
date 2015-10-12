@@ -1,5 +1,5 @@
 import Levenshtein
-import re, string, json, sys
+import re, string, json, sys,os
 from random import random, randint, choice
 from titlecase import titlecase
 from datetime import datetime
@@ -16,7 +16,9 @@ chosen_synonyms = {}
 
 
 api_keys = {}
-with open("api-keys.secret") as f:
+current_dir = os.path.dirname(__file__)
+api_keys_filename = os.path.join(current_dir, 'api-keys.secret')
+with open(api_keys_filename, 'r') as f:
   api_keys = yaml.load(f)
 
 import re, collections
