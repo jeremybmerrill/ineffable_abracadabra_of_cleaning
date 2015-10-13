@@ -10,18 +10,16 @@ and other books too, obviously.
 Natural Language?
 -----------------
 
-
 This uses word2vec, which is some existence-altering wizardry of its own. Tutorial and explanation below -- along with an interactive word2vec model: [http://radimrehurek.com/2014/02/word2vec-tutorial/](http://radimrehurek.com/2014/02/word2vec-tutorial/)
 
-Some ideas I had and might be inexplicably contained in the source
-------------------------------------------------------------------
+Some ideas I had and might be inexplicably contained in unreachable code in the source
+--------------------------------------------------------------------------------------
 
 ## other options to increase fidelity to grammatical structure of input:
  - use an off-the-shelf stemmer and compare the removed portion (leaf?) in the word and synonym for levenshtein distance
  - pre-parse (by hand) into SimpleNLG structures
    then synonymize each word (using an API)
    then use NLG for conjugation
- - use a stemmer to train my own word2vec model
 
 ## wordnik has an awesome API, might help doing the stem -> conjugated form
 http://developer.wordnik.com/docs.html#!/word/getRelatedWords_get_4
@@ -30,7 +28,6 @@ Future work
 -----------
 Themed book titles
 "What if Harry Potter was about artists"
-find mean of the input word (e.g. "chamber" or "secrets") 
 
 this requires a list of titles ALONG WITH their topics so we can do something like:
 
