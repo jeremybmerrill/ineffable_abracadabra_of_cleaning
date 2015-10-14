@@ -15,12 +15,15 @@ print("start loading w2v " + str(start))
 # w2v_model = Word2Vec.load("en_1000_no_stem/en.model") # MemoryError :-(
 try:
   model_filepath = sys.argv[1]
+  if model_filepath in ["-d", "--daemonize"]:
+    raise IndexError
+  w2v_model = Word2Vec.load(model_filepath)  # C binary format
 except IndexError:
   print("using default model")
   current_dir = os.path.dirname(__file__)
   model_filepath = os.path.join(current_dir, 'model_sentences_raw_words_min_count_50_size_200_downsampling_0.001.bin')
+  w2v_model = Word2Vec.load(model_filepath)  # C binary format
 print("using model from " + model_filepath)
-w2v_model = Word2Vec.load(model_filepath)  # C binary format
 
 print("finish loading w2v" +  str(datetime.now()))
 print("loading w2v took  " + str((datetime.now() - start).seconds) + " seconds")
