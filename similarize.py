@@ -78,7 +78,7 @@ def merge_dicts(*dict_args):
 
 
 
-stopwords = ["Harry Potter", "Harry", "Potter", "how", "where"]
+stopwords = ["Harry Potter", "Harry", "Potter", "how", "where", "I", "you"]
 stopwords_filename = os.path.join(current_dir, 'stopwords.txt')
 with open(stopwords_filename) as f:
   for line in f:
@@ -334,13 +334,19 @@ def do():
     book = choice(get_candidate_titles())
     joke_title = rephrase(book[0].lower())
     print(book)
-    return "What %s should write next: \n\n%s" % (book[1], joke_title)
+    tentative_joke = u"What %s should write after %s: \n\n%s" % (book[1].encode("utf-8"), titlecase(book[0].encode("utf-8")), joke_title.encode("utf-8"))
+    if len(tentative_joke) > 140:
+      joke = u"What %s should write next: \n\n%s" % (book[1].encode("utf-8"), joke_title.encode("utf-8"))
+    else:
+      joke = tentative_joke
+    print(len(joke))
+    return joke
   elif False: #rephrase it with a random theme (but the themes don't actually work)
     book = choice(get_candidate_titles())
     theme = choice(["art", "music", "pop", "history", "politics", "sex", "fashion", "food", "travel" ])
     joke_title = rephrase(book[0].lower(), theme)
     print(book)
-    return "What if %s was about %s: \n\n%s" % (book[0], theme, joke_title)
+    return u"What if %s was about %s: \n\n%s" % (book[0].encode("utf-8"), theme, joke_title)
 
 
 if __name__ == "__main__":
