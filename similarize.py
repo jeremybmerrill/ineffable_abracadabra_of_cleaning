@@ -283,7 +283,7 @@ def get_titles_from_nyt_api():
   resp = requests.get("http://api.nytimes.com/svc/books/v2/lists/overview.json?api-key=" + api_keys["nyt"]).json()
   # [u'Combined Print and E-Book Fiction', u'Combined Print and E-Book Nonfiction', u'Hardcover Fiction', u'Hardcover Nonfiction', u'Trade Fiction Paperback', u'Mass Market Paperback', u'Paperback Nonfiction', u'E-Book Fiction', u'E-Book Nonfiction', u'Advice How-To and Miscellaneous', u'Picture Books', u'Childrens Middle Grade Hardcover', u'Childrens Middle Grade Paperback', u'Childrens Middle Grade E-Book', u'Young Adult Hardcover', u'Young Adult Paperback', u'Young Adult E-Book', u'Series Books', u'Hardcover Graphic Books', u'Paperback Graphic Books', u'Manga', u'Animals', u'Business Books', u'Crime and Punishment', u'Culture', u'Education', u'Family', u'Fashion Manners and Customs', u'Humor', u'Hardcover Political Books', u'Relationships', u'Science', u'Travel']
   eligible_books = [item for sublist in [[merge_dicts(book,  {"list_name": l["list_name"]}) for book in l["books"] if book["title"].count(" ") > 3 and "vol." not in book["title"].lower()] for l in resp["results"]["lists"] if l["list_name"] not in ["Games and Activities"] ] for item in sublist]
-  return [(book["title"], book["author"]) for book in eligible_books]
+  return [(book["title"], book["author"], book["primary_isbn13"]) for book in eligible_books]
 
 def get_titles_from_wikipedia_csv():
   titles = []
@@ -291,9 +291,9 @@ def get_titles_from_wikipedia_csv():
   with open(bestselling_books_filename) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
-      # "Book","Author(s)","Original language","First published","Approximate sales"
+      # "Book","Author(s)","Original language","First published","Approximate sales","isbn"
       if row["Book"].count(" ") > 3:
-        titles.append((row["Book"], row["Author(s)"]))
+        titles.append((row["Book"], row["Author(s)"], row["isbn"]))
   return titles
 
 
@@ -332,18 +332,25 @@ def do():
     return jokes
   elif True: # pick a book title from the NYT bestsellers API and make a joke title from it
     book = choice(get_candidate_titles())
+    # https://openlibrary.org/isbn/0394720245.json has subjects
     joke_title = rephrase(book[0].lower())
     print(book)
-    tentative_joke = u"What %s should write after %s: \n\n%s" % (book[1].encode("utf-8"), titlecase(book[0].encode("utf-8")), joke_title.encode("utf-8"))
+    tentative_joke = u"What %s should write after %s: \n\n%s" % (book[1].decode("utf-8"), titlecase(book[0].encode("utf-8")), joke_title.encode("utf-8"))
     if len(tentative_joke) > 140:
-      joke = u"What %s should write next: \n\n%s" % (book[1].encode("utf-8"), joke_title.encode("utf-8"))
+      joke = u"What %s should write next: \n\n%s" % (book[1].decode("utf-8"), joke_title.encode("utf-8"))
     else:
       joke = tentative_joke
     print(len(joke))
     return joke
-  elif False: #rephrase it with a random theme (but the themes don't actually work)
-    book = choice(get_candidate_titles())
-    theme = choice(["art", "music", "pop", "history", "politics", "sex", "fashion", "food", "travel" ])
+  elif True: #rephrase it with a random theme (but the themes don't actually work)
+    book = choice([book for book in get_candidate_titles() ])
+    print(book)
+    url = "https://openlibrary.org/isbn/" + book[2] + ".json"
+    print(url)
+    resp = choice(requests.get(url).json())
+    theme = resp.get("subjects")
+    if not theme:
+      print("find another isbn for " + book[0])
     joke_title = rephrase(book[0].lower(), theme)
     print(book)
     return u"What if %s was about %s: \n\n%s" % (book[0].encode("utf-8"), theme, joke_title)

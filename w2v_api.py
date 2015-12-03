@@ -7,6 +7,7 @@ import sys
 import os
 
 w2v_api = Flask(__name__)
+w2v_api.config['PROPAGATE_EXCEPTIONS'] = True
 
 cached_synonyms = {}
 start = datetime.now()

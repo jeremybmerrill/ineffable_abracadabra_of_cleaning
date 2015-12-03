@@ -6,3 +6,4 @@ nltk
 flask
 twitter
 pyyaml
+cython
