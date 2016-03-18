@@ -123,19 +123,25 @@ def rephrase(sentence, theme=None):
     my_sentence = my_sentence[(split_idx+len(token)):]
   # words = [word for sublist in [[word, ' '] for word in TreebankWordTokenizer().tokenize(sentence)] for word in sublist ]
 
-  # TODO: put this in the API
-  bigrams_model_name = 'bigrams_model_nyt_sentences_5.5M_5.bin'
-  trigrams_model_name = "trigrams_model_nyt_sentences_5.5M_5.bin"
-  ngrams_models = {
-    "bigrams": bigrams_model_name,
-    "trigrams": trigrams_model_name
-  }
-  which_ngrams_model = "trigrams"
-  ngrams_model = Phrases.load(ngrams_models[which_ngrams_model])
-  print("ngrammized", ngrams_model[words])
+  # # TODO: put this in the API
+  # bigrams_model_name = 'bigrams_model_nyt_sentences_5.5M_5.bin'
+  # trigrams_model_name = "trigrams_model_nyt_sentences_5.5M_5.bin"
+  # ngrams_models = {
+  #   "bigrams": bigrams_model_name,
+  #   "trigrams": trigrams_model_name
+  # }
+  # which_ngrams_model = "trigrams"
+  # ngrams_model = Phrases.load(ngrams_models[which_ngrams_model])
+  # print("ngrammized", ngrams_model[words])
 
 
-  for word in ngrams_model[words]:
+  resp = requests.get("http://localhost:5000/phrases/" + ','.join(words)).json()
+  if len(resp["grouped"]) > 0:
+    phrases = resp["grouped"]
+  else: 
+    phrases = words
+
+  for word in phrases:
     if word == '':
       continue
     if word in stopwords or not word[0].isalpha():

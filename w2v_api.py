@@ -22,9 +22,19 @@ try:
 except IndexError:
   print("using default model")
   current_dir = os.path.dirname(__file__)
-  model_filepath = os.path.join(current_dir, 'model_nyt_sentences_5_raw_words_min_count_50_size_200_downsampling_0.001.bin')
+  model_filepath = os.path.join(current_dir, 'model_sentences_raw_words_trigrams_min_count_50_size_200_downsampling_0.001.bin')
   w2v_model = Word2Vec.load(model_filepath)  # C binary format
 print("using model from " + model_filepath)
+
+bigrams_model_name = 'bigrams_model_nyt_sentences_5.5M_5.bin'
+trigrams_model_name = "trigrams_model_nyt_sentences_5.5M_5.bin"
+ngrams_models = {
+  "bigrams": bigrams_model_name,
+  "trigrams": trigrams_model_name
+}
+which_ngrams_model = "trigrams"
+ngrams_model = Phrases.load(ngrams_models[which_ngrams_model])
+
 
 print("finish loading w2v" +  str(datetime.now()))
 print("loading w2v took  " + str((datetime.now() - start).seconds) + " seconds")
@@ -45,6 +55,11 @@ def similarize(word):
     similar_words = []
 
   return Response(json.dumps({'word': word, 'similar_words': similar_words}), mimetype='application/json')
+
+@w2v_api.route("/phrases/<sentence>")
+def group_ngrams(sentence):
+  split_sentence = sentence.split(",")
+  return Response(json.dumps({'grouped': ngrams_model[split_sentence], 'input': split_sentence}), mimetype='application/json')
 
 
 @w2v_api.route("/themed/<word>/<theme>")
