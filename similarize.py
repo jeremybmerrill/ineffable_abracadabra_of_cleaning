@@ -9,6 +9,8 @@ import requests
 import csv
 from tokenizer import TreebankWordTokenizer
 import yaml
+from  gensim.models import Phrases 
+
 
 stemming = False
 similar_words_source = "api"
@@ -120,7 +122,20 @@ def rephrase(sentence, theme=None):
     words.append(my_sentence[split_idx:(split_idx+len(token))])
     my_sentence = my_sentence[(split_idx+len(token)):]
   # words = [word for sublist in [[word, ' '] for word in TreebankWordTokenizer().tokenize(sentence)] for word in sublist ]
-  for word in words:
+
+  # TODO: put this in the API
+  bigrams_model_name = 'bigrams_model_nyt_sentences_5.5M_5.bin'
+  trigrams_model_name = "trigrams_model_nyt_sentences_5.5M_5.bin"
+  ngrams_models = {
+    "bigrams": bigrams_model_name,
+    "trigrams": trigrams_model_name
+  }
+  which_ngrams_model = "trigrams"
+  ngrams_model = Phrases.load(ngrams_models[which_ngrams_model])
+  print("ngrammized", ngrams_model[words])
+
+
+  for word in ngrams_model[words]:
     if word == '':
       continue
     if word in stopwords or not word[0].isalpha():
@@ -317,16 +332,39 @@ def get_candidate_titles():
   elif True:
     return get_titles_from_wikipedia_csv() + get_titles_from_nyt_api()
 
+def get_subject_from_isbn_openlibrary(isbn):
+  url = "https://openlibrary.org/isbn/" + isbn + ".json"
+  print(url)
+  resp = choice(requests.get(url).json())
+  theme = resp.get("subjects")
+
+# def get_subject_from_isbn(isbn):
+#   # info: https://www.oclc.org/developer/develop/linked-data/worldcat-entities/worldcat-work-entity.en.html
+#   # work example: http://experiment.worldcat.org/entity/work/data/34339
+#   # api info: https://platform.worldcat.org/api-explorer/xIDService
+#   # 
+#   isbnurl = "http://xisbn.worldcat.org/webservices/xid/isbn/%i?method=getEditions&format=json&fl=*" % isbn
+#   isbnresp = requests.get(isbnurl).json()
+#   oclcnum = isbnresp["list"][0]["oclcnum"][0] # probably should iterate until it finds one that works
+#   oclcurl = "http://xisbn.worldcat.org/webservices/xid/oclcnum/%i?method=getMetadata&format=json&fl=*" % oclcnum
+#   oclcresp = requests.get(oclcurl).json()
+#   owi = oclcresp["list"][0]["owi"][0]
+#   workurl = "http://experiment.worldcat.org/entity/work/data/%s.jsonld" % owi.replace("owi", '')
+#   workresp = requests.get(workurl).json()
+#   themes = [i["name"] for i in resp["@graph"] if i["type"] == "schema:Topic"]
+#   theme = choose([theme for theme in themes if [] theme])
+
+
 def do():
-  if False: #make one joke per choice
+  if True: #make one joke per choice
     jokes = []
-    for i, line in get_candidate_titles():
-      for n in xrange(0, 10):
-        joke = rephrase(line)
-        if joke == '':
-          continue
-        jokes.append(joke)
-        print(joke)
+    for n in xrange(0, 10):
+      print(n)
+      book = choice(get_candidate_titles())
+      joke = rephrase(book[0].lower())
+      if joke == '':
+        continue
+      jokes.append(joke)
     for joke in jokes:
       print(joke)
     return jokes
@@ -345,10 +383,7 @@ def do():
   elif True: #rephrase it with a random theme (but the themes don't actually work)
     book = choice([book for book in get_candidate_titles() ])
     print(book)
-    url = "https://openlibrary.org/isbn/" + book[2] + ".json"
-    print(url)
-    resp = choice(requests.get(url).json())
-    theme = resp.get("subjects")
+    theme = get_subject_from_isbn(book[2])
     if not theme:
       print("find another isbn for " + book[0])
     joke_title = rephrase(book[0].lower(), theme)
@@ -357,4 +392,4 @@ def do():
 
 
 if __name__ == "__main__":
-  print do()
+  print(do())
