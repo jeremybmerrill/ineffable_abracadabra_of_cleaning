@@ -7,6 +7,8 @@ using word2vec to find synonyms of the words in the title
 
 and other books too, obviously.
 
+see [@WhatToWriteNext](https://twitter.com/whattowritenext)
+
 Natural Language?
 -----------------
 
