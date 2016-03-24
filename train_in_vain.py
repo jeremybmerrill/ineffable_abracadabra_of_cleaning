@@ -78,33 +78,37 @@ class MySentences(object):
 
 smaller_sentences = MySentences(smaller_sentences_filename) # a memory-friendly iterator
 
-bigrams_threshold  = 8
-trigrams_threshold = 5
+bigrams_threshold  = 80
+trigrams_threshold = 50
+bigrams_max_vocab_size  = 10 * 1000 * 1000
+trigrams_max_vocab_size = 10 * 1000 * 1000
 try:
-  bigrams_model_name = "bigrams_model_%(input_filename)s_%(threshold)i.bin" % {
+  bigrams_model_name = "bigrams_model_%(input_filename)s_%(threshold)i_%(max_vocab_size)i.bin" % {
     'input_filename': '.'.join(smaller_sentences_filename.split("/")[-1].split(".")[:-1]),
-    'threshold': bigrams_threshold
+    'threshold': bigrams_threshold,
+    'max_vocab_size': bigrams_max_vocab_size
   }
 except:
   bigrams_model_name = "bigrams_model.bin"
 if exists(bigrams_model_name):
   bigrams_model = gensim.models.Phrases.load(bigrams_model_name)
 else:
-  bigrams_model = gensim.models.Phrases(smaller_sentences, threshold=bigrams_threshold)
+  bigrams_model = gensim.models.Phrases(smaller_sentences, threshold=bigrams_threshold, max_vocab_size=bigrams_max_vocab_size)
   bigrams_model.save(bigrams_model_name)
 
 
 try:
-  trigrams_model_name = "trigrams_model_%(input_filename)s_%(threshold)i.bin" % {
+  trigrams_model_name = "trigrams_model_%(input_filename)s_%(threshold)i_%(max_vocab_size)i.bin" % {
     'input_filename': '.'.join(smaller_sentences_filename.split("/")[-1].split(".")[:-1]),
-    'threshold': trigrams_threshold
+    'threshold': trigrams_threshold,
+    'max_vocab_size': trigrams_max_vocab_size
   }
 except:
   trigrams_model_name = "trigrams_model.bin"
 if exists(trigrams_model_name):
   trigrams_model = gensim.models.Phrases.load(trigrams_model_name)
 else:
-  trigrams_model = gensim.models.Phrases(bigrams_model[smaller_sentences], threshold=trigrams_threshold)
+  trigrams_model = gensim.models.Phrases(bigrams_model[smaller_sentences], threshold=trigrams_threshold, max_vocab_size=trigrams_max_vocab_size)
   trigrams_model.save(trigrams_model_name)
 
 
@@ -140,15 +144,17 @@ ngrams_model = "trigrams"
 min_count = 50 # was 10
 size = 200
 downsampling = 1e-3
-# model = gensim.models.Word2Vec((ngrams_models.get(ngrams_model, None)[sentences] if ngrams_models.get(ngrams_model, None) else sentences), workers=4, min_count=min_count, size=size, sample=downsampling)
-model = gensim.models.Word2Vec(ngrams_models.get(ngrams_model, lambda x: x)(sentences), workers=4, min_count=min_count, size=size, sample=downsampling)
 
-model.init_sims(replace=True)
-try:
-  model_name = "model_%s_%s_%s_min_count_%s_size_%s_downsampling_%s.bin" % (sentences_filename.split("/")[-1].split(".")[0], "stemmed" if stemming else "raw_words", ngrams_model, min_count, size, downsampling)
-except:
-  model_name = "model.bin"
-model.save(model_name)
+if False:
+  # model = gensim.models.Word2Vec((ngrams_models.get(ngrams_model, None)[sentences] if ngrams_models.get(ngrams_model, None) else sentences), workers=4, min_count=min_count, size=size, sample=downsampling)
+  model = gensim.models.Word2Vec(ngrams_models.get(ngrams_model, lambda x: x)(sentences), workers=4, min_count=min_count, size=size, sample=downsampling)
+
+  model.init_sims(replace=True)
+  try:
+    model_name = "model_%s_%s_%s_min_count_%s_size_%s_downsampling_%s.bin" % (sentences_filename.split("/")[-1].split(".")[0], "stemmed" if stemming else "raw_words", ngrams_model, min_count, size, downsampling)
+  except:
+    model_name = "model.bin"
+  model.save(model_name)
 
 print("finish training w2v" +  str(datetime.now()))
 print("training w2v took %i seconds (%i minutes)") % ((datetime.now() - start).seconds, (datetime.now() - start).seconds / 60)
