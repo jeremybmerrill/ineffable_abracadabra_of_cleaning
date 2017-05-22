@@ -5,6 +5,7 @@ import gensim
 from  gensim.models import Word2Vec, Phrases
 import sys
 import os
+from collections import OrderedDict
 
 w2v_api = Flask(__name__)
 w2v_api.config['PROPAGATE_EXCEPTIONS'] = True
@@ -18,22 +19,27 @@ try:
   model_filepath = sys.argv[1]
   if model_filepath in ["-d", "--daemonize"]:
     raise IndexError
-  w2v_model = Word2Vec.load(model_filepath)  # C binary format
 except IndexError:
-  print("using default model")
-  current_dir = os.path.dirname(__file__)
-  model_filepath = os.path.join(current_dir, 'model_sentences_raw_words_trigrams_min_count_50_size_200_downsampling_0.001.bin')
-  w2v_model = Word2Vec.load(model_filepath)  # C binary format
+  try:
+    with open("most_recent_model_filename.txt", "r") as f:
+      model_filepath = f.read().strip()
+  except IOError: 
+    print("using default model")
+    current_dir = os.path.dirname(__file__)
+    model_filepath = os.path.join(current_dir, 'model_sentences_raw_words_trigrams_min_count_50_size_200_downsampling_0.001.bin')
+w2v_model = Word2Vec.load(model_filepath) #, encoding='latin1')  # C binary format
 print("using model from " + model_filepath)
 
-bigrams_model_name = 'bigrams_model_nyt_sentences_5.5M_5.bin'
-trigrams_model_name = "trigrams_model_nyt_sentences_5.5M_5.bin"
+bigrams_model_name =   'bigrams_model_nyt_sentences_5.5M_80_10000000.bin'
+trigrams_model_name = "trigrams_model_nyt_sentences_5.5M_50_10000000.bin"
 ngrams_models = {
   "bigrams": bigrams_model_name,
   "trigrams": trigrams_model_name
 }
-which_ngrams_model = "trigrams"
-ngrams_model = Phrases.load(ngrams_models[which_ngrams_model])
+which_ngrams_model = None# "trigrams"
+
+if which_ngrams_model:
+  ngrams_model = Phrases.load(ngrams_models[which_ngrams_model])
 
 
 print("finish loading w2v" +  str(datetime.now()))
@@ -59,7 +65,7 @@ def similarize(word):
 @w2v_api.route("/phrases/<sentence>")
 def group_ngrams(sentence):
   split_sentence = sentence.split(",")
-  return Response(json.dumps({'grouped': ngrams_model[split_sentence], 'input': split_sentence}), mimetype='application/json')
+  return Response(json.dumps({'grouped': ngrams_model[split_sentence] if which_ngrams_model else split_sentence, 'input': split_sentence}), mimetype='application/json')
 
 
 @w2v_api.route("/themed/<word>/<theme>")
@@ -77,7 +83,11 @@ def analogy(word, isto, as_):
     print("%s : %s :: %s : %s" % (word, isto, as_, similar_words[0][0]))
   except KeyError: #word not in vocabulary
     similar_words = []
-  return Response(json.dumps({'word': word, 'similar_words': similar_words}), mimetype='application/json')
+  return Response(json.dumps(OrderedDict([
+     ('analogy', "{} is to {} as {} is to __________".format(word.upper(), isto.upper(), as_.upper())),
+     ('similar_words', similar_words)
+    ])
+  ), mimetype='application/json')
 # new_jersey isto bruce_springsteen as long_island isto
 # bruce_springsteen - new_jersey + long_island
 # 

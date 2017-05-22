@@ -11,8 +11,12 @@ import re
 from os.path import exists
 
 # Dear future Jeremy,
-# you are going to want to know that there are >#54908750 sentences
+# you are going to want to know that there are > 54,908,750 sentences
 # in the corpus. 
+
+# this setup trains a phrase2vec trigram model to join "new", "york", "times" as "new_york_times" 
+# using a (nonrandom) sample of 10% of the corpus
+# and then trains a word2vec model on the whole corpus.
 
 # if you want to play with the phrases models, here's what to c/p into python
 # import gensim
@@ -22,12 +26,16 @@ from os.path import exists
 # trigrams_model = gensim.models.Phrases.load(trigrams_model_name)
 # trigrams_model[bigrams_model[["hillary", "rodham"]]
 
+# the POS-tagged corpora were generated from sentences.txt
+# with ./stanford-postagger.sh models/wsj-0-18-left3words-distsim.tagger ~/code/ineffable_wizardry_of_cleaning/nyt_sentences_5.5M.txt > ~/code/ineffable_wizardry_of_cleaning/nyt_sentences_5.5M_tagged.txt
+# at 19k words per second, the 5.5M sentence sample took ~1.5 hours.
+
 
 stemming = False
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 # sentences_filename = "eng_news_2013_3M/eng_news_2013_3M-sentences.txt"
-sentences_filename = "nyt/taggerAPI/sentences.txt"
+sentences_filename = "nyt_sentences_5.5M.txt" # should really be nyt/taggerAPI/sentences.txt but that takes 6x as long to train.
 smaller_sentences_filename = "nyt_sentences_5.5M.txt"
 start = datetime.now()
 print("start training w2v " + str(start))
@@ -78,8 +86,8 @@ class MySentences(object):
 
 smaller_sentences = MySentences(smaller_sentences_filename) # a memory-friendly iterator
 
-bigrams_threshold  = 80
-trigrams_threshold = 50
+bigrams_threshold  = 15
+trigrams_threshold = 10 # new york times is 11.1
 bigrams_max_vocab_size  = 10 * 1000 * 1000
 trigrams_max_vocab_size = 10 * 1000 * 1000
 try:
@@ -96,6 +104,18 @@ else:
   bigrams_model = gensim.models.Phrases(smaller_sentences, threshold=bigrams_threshold, max_vocab_size=bigrams_max_vocab_size)
   bigrams_model.save(bigrams_model_name)
 
+we_should_save_the_bigrams = False
+if we_should_save_the_bigrams:
+  bigrams_so_far = set()
+  with open(bigrams_model_name + ".txt", 'a') as f:
+    for phrase, score in bigrams_model.export_phrases(smaller_sentences):
+      if phrase == "new york":
+        print("{}\t{}\n".format(phrase, score))
+      if phrase not in bigrams_so_far:
+        f.write("{}\t{}\n".format(phrase, score))
+        bigrams_so_far.add(phrase)
+
+smaller_sentences = MySentences(smaller_sentences_filename) # a memory-friendly iterator
 
 try:
   trigrams_model_name = "trigrams_model_%(input_filename)s_%(threshold)i_%(max_vocab_size)i.bin" % {
@@ -111,6 +131,14 @@ else:
   trigrams_model = gensim.models.Phrases(bigrams_model[smaller_sentences], threshold=trigrams_threshold, max_vocab_size=trigrams_max_vocab_size)
   trigrams_model.save(trigrams_model_name)
 
+we_should_save_the_trigrams = False
+if we_should_save_the_trigrams:
+  trigrams_so_far = set()
+  with open(trigrams_model_name + ".txt", 'a') as f:
+    for phrase, score in trigrams_model.export_phrases(bigrams_model[smaller_sentences]):
+      if phrase not in trigrams_so_far:
+        f.write("{}\t{}\n".format(phrase, score))
+        trigrams_so_far.add(phrase)
 
 
 # sentences_with_phrases = [
@@ -138,23 +166,34 @@ sentences = MySentences(sentences_filename) # a memory-friendly iterator
 
 ngrams_models = {
   "bigrams": lambda x: bigrams_model[x],
-  "trigrams": lambda x: trigrams_model[bigrams_model[x]]
+  "trigrams": lambda x: trigrams_model[bigrams_model[x]],
 }
 ngrams_model = "trigrams"
-min_count = 50 # was 10
+min_count = 10 # was 10, also 50
 size = 200
-downsampling = 1e-3
+downsampling = 1e-3 # has variously been 1e-3 and 0
+use_skipgrams = False
 
-if False:
-  # model = gensim.models.Word2Vec((ngrams_models.get(ngrams_model, None)[sentences] if ngrams_models.get(ngrams_model, None) else sentences), workers=4, min_count=min_count, size=size, sample=downsampling)
-  model = gensim.models.Word2Vec(ngrams_models.get(ngrams_model, lambda x: x)(sentences), workers=4, min_count=min_count, size=size, sample=downsampling)
+
+if True:
+  model = gensim.models.Word2Vec(
+                                  ngrams_models[ngrams_model](sentences) if ngrams_model else sentences, 
+                                  workers=4, 
+                                  min_count=min_count, 
+                                  size=size, 
+                                  sample=downsampling, 
+                                  # sg=(1 if use_skipgrams else 0)
+                                )
 
   model.init_sims(replace=True)
   try:
-    model_name = "model_%s_%s_%s_min_count_%s_size_%s_downsampling_%s.bin" % (sentences_filename.split("/")[-1].split(".")[0], "stemmed" if stemming else "raw_words", ngrams_model, min_count, size, downsampling)
+    model_name = "model_%s_%s_%s_min_count_%s_size_%s_downsampling_%s_%s.bin" % (sentences_filename.split("/")[-1].split(".")[0], "stemmed" if stemming else "raw_words", ngrams_model, min_count, size, downsampling, "sg" if use_skipgrams else "cbow")
   except:
     model_name = "model.bin"
   model.save(model_name)
+
+with open("most_recent_model_filename.txt", "w") as f:
+  f.write(model_name)
 
 print("finish training w2v" +  str(datetime.now()))
 print("training w2v took %i seconds (%i minutes)") % ((datetime.now() - start).seconds, (datetime.now() - start).seconds / 60)

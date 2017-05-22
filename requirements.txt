@@ -1,5 +1,5 @@
 requests
-gensim
+gensim==0.13.4.1
 python-Levenshtein
 titlecase
 nltk
