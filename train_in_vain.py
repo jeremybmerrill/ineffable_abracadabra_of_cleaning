@@ -35,7 +35,7 @@ stemming = False
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 # sentences_filename = "eng_news_2013_3M/eng_news_2013_3M-sentences.txt"
-sentences_filename = "nyt_sentences_5.5M.txt" # should really be nyt/taggerAPI/sentences.txt but that takes 6x as long to train.
+sentences_filename = "nyt_sentences_5.5M.txt" # should really be nyt/taggerAPI/sentences.txt but that takes 6x as long to train versus nyt_sentences_5.5M.txt
 smaller_sentences_filename = "nyt_sentences_5.5M.txt"
 start = datetime.now()
 print("start training w2v " + str(start))

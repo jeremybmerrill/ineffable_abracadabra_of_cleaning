@@ -80,7 +80,7 @@ def merge_dicts(*dict_args):
 
 
 
-stopwords = ["Harry Potter", "Harry", "Potter", "how", "where", "I", "you"]
+stopwords = ["Harry Potter", "Harry", "Potter", "how", "where", "I", "you", "do"]
 stopwords_filename = os.path.join(current_dir, 'stopwords.txt')
 with open(stopwords_filename) as f:
   for line in f:
