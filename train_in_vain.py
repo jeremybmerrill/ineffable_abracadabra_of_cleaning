@@ -21,9 +21,9 @@ from os.path import exists
 # if you want to play with the phrases models, here's what to c/p into python
 # import gensim
 # bigrams_model_name = "bigrams_model.bin"
-# bigrams_model = gensim.models.Phrases.load(bigrams_model_name)
+# bigrams_model = gensim.models.phrases.Phraser.load(bigrams_model_name)
 # trigrams_model_name = "trigrams_model.bin"
-# trigrams_model = gensim.models.Phrases.load(trigrams_model_name)
+# trigrams_model = gensim.models.phrases.Phraser.load(trigrams_model_name)
 # trigrams_model[bigrams_model[["hillary", "rodham"]]
 
 # the POS-tagged corpora were generated from sentences.txt
@@ -99,21 +99,22 @@ try:
 except:
   bigrams_model_name = "bigrams_model.bin"
 if exists(bigrams_model_name):
-  bigrams_model = gensim.models.Phrases.load(bigrams_model_name)
+  bigrams_model = gensim.models.phrases.Phraser.load(bigrams_model_name)
 else:
-  bigrams_model = gensim.models.Phrases(smaller_sentences, threshold=bigrams_threshold, max_vocab_size=bigrams_max_vocab_size)
-  bigrams_model.save(bigrams_model_name)
+  bigrams_model_phrases = gensim.models.Phrases(smaller_sentences, threshold=bigrams_threshold, max_vocab_size=bigrams_max_vocab_size)
+  bigrams_model_phrases.save(bigrams_model_name)
+  bigrams_model = gensim.models.phrases.Phraser(bigrams_model_phrases)
 
-we_should_save_the_bigrams = False
-if we_should_save_the_bigrams:
-  bigrams_so_far = set()
-  with open(bigrams_model_name + ".txt", 'a') as f:
-    for phrase, score in bigrams_model.export_phrases(smaller_sentences):
-      if phrase == "new york":
-        print("{}\t{}\n".format(phrase, score))
-      if phrase not in bigrams_so_far:
-        f.write("{}\t{}\n".format(phrase, score))
-        bigrams_so_far.add(phrase)
+  we_should_save_the_bigrams = False
+  if we_should_save_the_bigrams:
+    bigrams_so_far = set()
+    with open(bigrams_model_name + ".txt", 'a') as f:
+      for phrase, score in bigrams_model_phrases.export_phrases(smaller_sentences):
+        if phrase == "new york":
+          print("{}\t{}\n".format(phrase, score))
+        if phrase not in bigrams_so_far:
+          f.write("{}\t{}\n".format(phrase, score))
+          bigrams_so_far.add(phrase)
 
 smaller_sentences = MySentences(smaller_sentences_filename) # a memory-friendly iterator
 
@@ -126,19 +127,20 @@ try:
 except:
   trigrams_model_name = "trigrams_model.bin"
 if exists(trigrams_model_name):
-  trigrams_model = gensim.models.Phrases.load(trigrams_model_name)
+  trigrams_model = gensim.models.phrases.Phraser.load(trigrams_model_name)
 else:
-  trigrams_model = gensim.models.Phrases(bigrams_model[smaller_sentences], threshold=trigrams_threshold, max_vocab_size=trigrams_max_vocab_size)
-  trigrams_model.save(trigrams_model_name)
+  trigrams_model_phrases = gensim.models.Phrases(bigrams_model[smaller_sentences], threshold=trigrams_threshold, max_vocab_size=trigrams_max_vocab_size)
+  trigrams_model_phrases.save(trigrams_model_name)
+  trigrams_model = gensim.models.phrases.Phraser(trigrams_model_phrases)
 
-we_should_save_the_trigrams = False
-if we_should_save_the_trigrams:
-  trigrams_so_far = set()
-  with open(trigrams_model_name + ".txt", 'a') as f:
-    for phrase, score in trigrams_model.export_phrases(bigrams_model[smaller_sentences]):
-      if phrase not in trigrams_so_far:
-        f.write("{}\t{}\n".format(phrase, score))
-        trigrams_so_far.add(phrase)
+  we_should_save_the_trigrams = False
+  if we_should_save_the_trigrams:
+    trigrams_so_far = set()
+    with open(trigrams_model_name + ".txt", 'a') as f:
+      for phrase, score in trigrams_model_phrases.export_phrases(bigrams_model[smaller_sentences]):
+        if phrase not in trigrams_so_far:
+          f.write("{}\t{}\n".format(phrase, score))
+          trigrams_so_far.add(phrase)
 
 
 # sentences_with_phrases = [
@@ -175,6 +177,8 @@ downsampling = 1e-3 # has variously been 1e-3 and 0
 use_skipgrams = False
 
 
+print( list(bigrams_model[["bill clinton likes to read the new york times".split(" ")]]))
+
 if True:
   model = gensim.models.Word2Vec(
                                   ngrams_models[ngrams_model](sentences) if ngrams_model else sentences, 
@@ -191,9 +195,10 @@ if True:
   except:
     model_name = "model.bin"
   model.save(model_name)
+  print(model.wv.most_similar(positive=["pizza", "atlanta"], negative=["brooklyn"], topn=20))
 
-with open("most_recent_model_filename.txt", "w") as f:
-  f.write(model_name)
+  with open("most_recent_model_filename.txt", "w") as f:
+    f.write(model_name)
 
 print("finish training w2v" +  str(datetime.now()))
 print("training w2v took %i seconds (%i minutes)") % ((datetime.now() - start).seconds, (datetime.now() - start).seconds / 60)

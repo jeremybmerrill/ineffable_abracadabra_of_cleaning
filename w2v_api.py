@@ -55,7 +55,7 @@ def similarize(word):
     try: 
       similar_words = cached_synonyms[word]
     except KeyError:
-      similar_words = w2v_model.most_similar(positive=[word], negative=[], topn=20)
+      similar_words = w2v_model.wv.most_similar(positive=[word], negative=[], topn=20)
       cached_synonyms[word] = similar_words
   except KeyError: #word not in vocabulary
     similar_words = []
@@ -71,7 +71,7 @@ def group_ngrams(sentence):
 @w2v_api.route("/themed/<word>/<theme>")
 def themed(word, theme):
   try:
-    similar_words = w2v_model.most_similar_cosmul(positive=[(word, 1)] + [(theme, 0.75)], negative=[], topn=20)
+    similar_words = w2v_model.wv.most_similar_cosmul(positive=[(word, 1)] + [(theme, 0.75)], negative=[], topn=20)
   except KeyError: #word not in vocabulary
     similar_words = []
   return Response(json.dumps({'word': word, 'similar_words': similar_words}), mimetype='application/json')
@@ -79,7 +79,7 @@ def themed(word, theme):
 @w2v_api.route("/analogy/<word>/<isto>/<as_>")
 def analogy(word, isto, as_):
   try:
-    similar_words = w2v_model.most_similar_cosmul(positive=[as_, isto], negative=[word], topn=20)
+    similar_words = w2v_model.wv.most_similar_cosmul(positive=[as_, isto], negative=[word], topn=20)
     print("%s : %s :: %s : %s" % (word, isto, as_, similar_words[0][0]))
   except KeyError: #word not in vocabulary
     similar_words = []
