@@ -195,6 +195,8 @@ if True:
 with open("most_recent_model_filename.txt", "w") as f:
   f.write(model_name)
 
+  print(model.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
+
 print("finish training w2v" +  str(datetime.now()))
 print("training w2v took %i seconds (%i minutes)") % ((datetime.now() - start).seconds, (datetime.now() - start).seconds / 60)
 # TODO: test more via https://www.kaggle.com/c/word2vec-nlp-tutorial/details/part-2-word-vectors
