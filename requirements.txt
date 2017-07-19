@@ -1,5 +1,5 @@
 requests
-gensim==0.13.4.1
+gensim==2.1.0
 python-Levenshtein
 titlecase
 nltk
@@ -7,3 +7,4 @@ flask
 twitter
 pyyaml
 cython
+tweepy

@@ -30,8 +30,8 @@ except IndexError:
 w2v_model = Word2Vec.load(model_filepath) #, encoding='latin1')  # C binary format
 print("using model from " + model_filepath)
 
-bigrams_model_name =   'bigrams_model_nyt_sentences_5.5M_80_10000000.bin'
-trigrams_model_name = "trigrams_model_nyt_sentences_5.5M_50_10000000.bin"
+bigrams_model_name =   'bigrams_model_nyt_sentences_5.5M_15_10000000.bin'
+trigrams_model_name = "trigrams_model_nyt_sentences_5.5M_10_10000000.bin"
 ngrams_models = {
   "bigrams": bigrams_model_name,
   "trigrams": trigrams_model_name
@@ -55,7 +55,7 @@ def similarize(word):
     try: 
       similar_words = cached_synonyms[word]
     except KeyError:
-      similar_words = w2v_model.most_similar(positive=[word], negative=[], topn=20)
+      similar_words = w2v_model.wv.most_similar(positive=[word], negative=[], topn=5)
       cached_synonyms[word] = similar_words
   except KeyError: #word not in vocabulary
     similar_words = []
@@ -71,15 +71,28 @@ def group_ngrams(sentence):
 @w2v_api.route("/themed/<word>/<theme>")
 def themed(word, theme):
   try:
-    similar_words = w2v_model.most_similar_cosmul(positive=[(word, 1)] + [(theme, 0.75)], negative=[], topn=20)
+    similar_words = w2v_model.wv.most_similar_cosmul(positive=[(word, 1)] + [(theme, 0.75)], negative=[], topn=5)
   except KeyError: #word not in vocabulary
     similar_words = []
   return Response(json.dumps({'word': word, 'similar_words': similar_words}), mimetype='application/json')
 
+@w2v_api.route("/analogy_cosmul/<word>/<isto>/<as_>")
+def analogy_cosmul(word, isto, as_):
+  try:
+    similar_words = w2v_model.wv.most_similar_cosmul(positive=[as_, isto], negative=[word], topn=5)
+    print("%s : %s :: %s : %s" % (word, isto, as_, similar_words[0][0]))
+  except KeyError: #word not in vocabulary
+    similar_words = []
+  return Response(json.dumps(OrderedDict([
+     ('analogy', "{} is to {} as {} is to __________".format(word.upper(), isto.upper(), as_.upper())),
+     ('similar_words', similar_words)
+    ])
+  ), mimetype='application/json')
+
 @w2v_api.route("/analogy/<word>/<isto>/<as_>")
 def analogy(word, isto, as_):
   try:
-    similar_words = w2v_model.most_similar_cosmul(positive=[as_, isto], negative=[word], topn=20)
+    similar_words = w2v_model.wv.most_similar(positive=[as_, isto], negative=[word], topn=5)
     print("%s : %s :: %s : %s" % (word, isto, as_, similar_words[0][0]))
   except KeyError: #word not in vocabulary
     similar_words = []
