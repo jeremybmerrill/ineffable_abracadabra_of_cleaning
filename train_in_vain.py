@@ -163,8 +163,45 @@ else:
 #   print(trigrams_model[sent])
 # raise Exception
 
-sentences = MySentences(sentences_filename) # a memory-friendly iterator
 
+# an iterator, via http://rare-technologies.com/word2vec-tutorial/
+class SentencesToNgrammify(object):
+  def __init__(self, filename, ngramlambda=None):
+    self.filename = filename
+    self.alpha_re = re.compile("^[a-zA-Z]+'?[a-zA-Z]*?$") # allow single apostrophes but not double apostrophes: note, this doesn't allow 'ere
+    if stemming: 
+      self.stemmer = PorterStemmer()
+    self.ngramlambda = ngramlambda
+    self.treebank_word_tokenizer = TreebankWordTokenizer()
+    # TODO: use http://www.nltk.org/howto/stem.html
+
+  def __iter__(self):
+    for line in open(self.filename):
+      # TODO find a better way to distinguish sentence-initial caps from proper noun
+
+      # sentences come like this:
+      # 80  10:11 p.m., an unwanted person was reported on College Avenue.
+      # 81  10:13 a.m., a report of shoplifting was investigated at Maine Smoke Shop on College Avenue.
+      # 82  10:14: The proportion of A-levels awarded at least an A grade has fallen for the second year in a row.
+      # 141529  But the debt ceiling may end up being the larger inflection point, especially as Obama staked out a hard-lined position against negotiating over that vote.
+
+      sentence = line.decode("UTF8").split("\t", 1)[-1].replace(".", ' ')
+      words = [word.lower() for word in self.treebank_word_tokenizer.tokenize(sentence) if re.match(self.alpha_re, word) ]
+      if stemming:
+        stems = [self.stemmer.stem(word) for word in words]
+        yield self.ngramlambda(stems)
+      else:
+        yield self.ngramlambda(words)
+
+def NgrammedSentences(object):
+  def __init__(self, filename):
+    self.filename = filename
+
+  def __iter__(self):
+    print(self.filename)
+    for line in open(self.filename):
+      print line.split(" ")
+      yield line.split(" ")
 
 ngrams_models = {
   "bigrams": lambda x: bigrams_model[x],
@@ -177,11 +214,20 @@ downsampling = 1e-3 # has variously been 1e-3 and 0
 use_skipgrams = False
 
 
-print( list(bigrams_model[["bill clinton likes to read the new york times".split(" ")]]))
+ngrammed_sentences_filename = "ngrammed_sentences_%s_%s_%s.txt" % (sentences_filename.split("/")[-1].split(".")[0], "stemmed" if stemming else "raw_words", ngrams_model)
+if exists(ngrammed_sentences_filename):
+  print("loading sentences from pre-phrasified file: {}".format(ngrammed_sentences_filename))
+  sentences = NgrammedSentences(ngrammed_sentences_filename)
+else:
+  sentences = SentencesToNgrammify(sentences_filename, ngrams_models[ngrams_model])
+  print("writing phrasified sentences to file: {}".format(ngrammed_sentences_filename))
+  with open(ngrammed_sentences_filename, 'a') as f:
+    for s in sentences:
+      f.write(' '.join(s) + "\n")
 
 if True:
   model = gensim.models.Word2Vec(
-                                  ngrams_models[ngrams_model](sentences) if ngrams_model else sentences, 
+                                  sentences, 
                                   workers=4, 
                                   min_count=min_count, 
                                   size=size, 
@@ -189,13 +235,13 @@ if True:
                                   # sg=(1 if use_skipgrams else 0)
                                 )
 
-  model.init_sims(replace=True)
+  # model.init_sims(replace=True)
   try:
     model_name = "model_%s_%s_%s_min_count_%s_size_%s_downsampling_%s_%s.bin" % (sentences_filename.split("/")[-1].split(".")[0], "stemmed" if stemming else "raw_words", ngrams_model, min_count, size, downsampling, "sg" if use_skipgrams else "cbow")
   except:
     model_name = "model.bin"
   model.save(model_name)
-  print(model.wv.most_similar(positive=["pizza", "atlanta"], negative=["brooklyn"], topn=20))
+  print(model.most_similar(positive=["pizza", "atlanta"], negative=["brooklyn"], topn=20))
 
   with open("most_recent_model_filename.txt", "w") as f:
     f.write(model_name)

@@ -7,3 +7,4 @@ flask
 twitter
 pyyaml
 cython
+tweepy
