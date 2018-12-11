@@ -1,4 +1,4 @@
-The Ineffable Wizardry of Cleaning
+The Ineffable Abracadabra of Cleaning
 ==================================
 
 ugh I can't remember the name of that cleaning up book
