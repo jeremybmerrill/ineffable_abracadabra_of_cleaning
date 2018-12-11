@@ -35,8 +35,10 @@ stemming = False
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 # sentences_filename = "eng_news_2013_3M/eng_news_2013_3M-sentences.txt"
-sentences_filename = "nyt_sentences_5.5M.txt" # should really be nyt/taggerAPI/sentences.txt but that takes 6x as long to train versus nyt_sentences_5.5M.txt
-smaller_sentences_filename = "nyt_sentences_5.5M.txt"
+sentences_filename = "nyt_sentences_tagged.txt" # should really be nyt/taggerAPI/sentences.txt but that takes 6x as long to train versus nyt_sentences_5.5M.txt
+smaller_sentences_filename = "nyt_sentences_5.5M_tagged.txt"
+pos_tagged = 'tagged' in sentences_filename
+
 start = datetime.now()
 print("start training w2v " + str(start))
 
@@ -65,7 +67,6 @@ class MySentences(object):
       self.stemmer = PorterStemmer()
     self.treebank_word_tokenizer = TreebankWordTokenizer()
     # TODO: use http://www.nltk.org/howto/stem.html
-
   def __iter__(self):
     for line in open(self.filename):
       # TODO find a better way to distinguish sentence-initial caps from proper noun
@@ -75,9 +76,8 @@ class MySentences(object):
       # 81  10:13 a.m., a report of shoplifting was investigated at Maine Smoke Shop on College Avenue.
       # 82  10:14: The proportion of A-levels awarded at least an A grade has fallen for the second year in a row.
       # 141529  But the debt ceiling may end up being the larger inflection point, especially as Obama staked out a hard-lined position against negotiating over that vote.
-
-      sentence = line.decode("UTF8").split("\t", 1)[-1].replace(".", ' ')
-      words = [word.lower() for word in self.treebank_word_tokenizer.tokenize(sentence) if re.match(self.alpha_re, word) ]
+      sentence = line.split("\t", 1)[-1].replace(".", ' ')
+      words = [word.lower() for word in self.treebank_word_tokenizer.tokenize(sentence) if re.match(self.alpha_re, word.split("_")[0]) ]
       if stemming:
         stems = [self.stemmer.stem(word) for word in words]
         yield stems
@@ -86,8 +86,8 @@ class MySentences(object):
 
 smaller_sentences = MySentences(smaller_sentences_filename) # a memory-friendly iterator
 
-bigrams_threshold  = 15
-trigrams_threshold = 10 # new york times is 11.1
+bigrams_threshold  = 5 if pos_tagged else 15
+trigrams_threshold = 5 if pos_tagged else 10 # new york times is 11.1
 bigrams_max_vocab_size  = 10 * 1000 * 1000
 trigrams_max_vocab_size = 10 * 1000 * 1000
 try:
@@ -184,24 +184,21 @@ class SentencesToNgrammify(object):
       # 81  10:13 a.m., a report of shoplifting was investigated at Maine Smoke Shop on College Avenue.
       # 82  10:14: The proportion of A-levels awarded at least an A grade has fallen for the second year in a row.
       # 141529  But the debt ceiling may end up being the larger inflection point, especially as Obama staked out a hard-lined position against negotiating over that vote.
-
-      sentence = line.decode("UTF8").split("\t", 1)[-1].replace(".", ' ')
-      words = [word.lower() for word in self.treebank_word_tokenizer.tokenize(sentence) if re.match(self.alpha_re, word) ]
+      sentence = line.split("\t", 1)[-1].replace(".", ' ')
+      words = [word.lower() for word in self.treebank_word_tokenizer.tokenize(sentence) if re.match(self.alpha_re, word.split("_")[0]) ]
       if stemming:
         stems = [self.stemmer.stem(word) for word in words]
         yield self.ngramlambda(stems)
       else:
         yield self.ngramlambda(words)
 
-def NgrammedSentences(object):
+class NgrammedSentences(object):
   def __init__(self, filename):
     self.filename = filename
 
   def __iter__(self):
-    print(self.filename)
-    for line in open(self.filename):
-      print line.split(" ")
-      yield line.split(" ")
+    for line in open(self.filename, 'r'):
+      yield line.strip().split(" ")
 
 ngrams_models = {
   "bigrams": lambda x: bigrams_model[x],
@@ -213,8 +210,8 @@ size = 200
 downsampling = 1e-3 # has variously been 1e-3 and 0
 use_skipgrams = False
 
-
-ngrammed_sentences_filename = "ngrammed_sentences_%s_%s_%s.txt" % (sentences_filename.split("/")[-1].split(".")[0], "stemmed" if stemming else "raw_words", ngrams_model)
+sentences = None
+ngrammed_sentences_filename = "ngrammed_sentences_%s_%s_%s.txt" % ('.'.join(sentences_filename.split("/")[-1].split(".")[:-1]), "stemmed" if stemming else "raw_words", ngrams_model)
 if exists(ngrammed_sentences_filename):
   print("loading sentences from pre-phrasified file: {}".format(ngrammed_sentences_filename))
   sentences = NgrammedSentences(ngrammed_sentences_filename)
@@ -224,6 +221,7 @@ else:
   with open(ngrammed_sentences_filename, 'a') as f:
     for s in sentences:
       f.write(' '.join(s) + "\n")
+  sentences = NgrammedSentences(ngrammed_sentences_filename)
 
 if True:
   model = gensim.models.Word2Vec(
@@ -237,7 +235,7 @@ if True:
 
   # model.init_sims(replace=True)
   try:
-    model_name = "model_%s_%s_%s_min_count_%s_size_%s_downsampling_%s_%s.bin" % (sentences_filename.split("/")[-1].split(".")[0], "stemmed" if stemming else "raw_words", ngrams_model, min_count, size, downsampling, "sg" if use_skipgrams else "cbow")
+    model_name = "model_%s_%s_%s_min_count_%s_size_%s_downsampling_%s_%s.bin" % ('.'.join(sentences_filename.split("/")[-1].split(".")[:-1]), "stemmed" if stemming else "raw_words", ngrams_model, min_count, size, downsampling, "sg" if use_skipgrams else "cbow")
   except:
     model_name = "model.bin"
   model.save(model_name)
@@ -249,5 +247,5 @@ if True:
   print(model.most_similar_cosmul(positive=['woman', 'king'], negative=['man']))
 
 print("finish training w2v" +  str(datetime.now()))
-print("training w2v took %i seconds (%i minutes)") % ((datetime.now() - start).seconds, (datetime.now() - start).seconds / 60)
+print("training w2v took {} seconds ({} minutes)".format((datetime.now() - start).seconds, (datetime.now() - start).seconds / 60))
 # TODO: test more via https://www.kaggle.com/c/word2vec-nlp-tutorial/details/part-2-word-vectors

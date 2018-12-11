@@ -36,7 +36,7 @@ ngrams_models = {
   "bigrams": bigrams_model_name,
   "trigrams": trigrams_model_name
 }
-which_ngrams_model = None# "trigrams"
+which_ngrams_model = "trigrams"
 
 if which_ngrams_model:
   ngrams_model = Phrases.load(ngrams_models[which_ngrams_model])
@@ -71,7 +71,7 @@ def group_ngrams(sentence):
 @w2v_api.route("/themed/<word>/<theme>")
 def themed(word, theme):
   try:
-    similar_words = w2v_model.wv.most_similar_cosmul(positive=[(word, 1)] + [(theme, 0.75)], negative=[], topn=5)
+    similar_words = w2v_model.wv.most_similar(positive=[(word, 1)] + [(theme, 1)], negative=[], topn=50)
   except KeyError: #word not in vocabulary
     similar_words = []
   return Response(json.dumps({'word': word, 'similar_words': similar_words}), mimetype='application/json')
