@@ -11,11 +11,15 @@ from os import makedirs
 
 
 class Fauxken:
+  """At times, we mostly deal with tokens, but may want to create our own. This is a faux token
+  (aka Fauxken) that has empty lefts and rights and has a user-definable text."""
   text = None
+  lower_ = None
   lefts = []
   rights = []
   def __init__(self, n):
     self.text = n
+    self.lower_ = n.lower()
 BEGIN = Fauxken("<BEGIN>")
 
 # goal is to parse a corpus to dependency trees, so I can train a model
