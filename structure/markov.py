@@ -8,7 +8,7 @@ from sys import argv, maxsize
 from os.path import basename, join
 
 myseed = randrange(maxsize)
-myseed = 7553853281898277781
+# myseed = 3477974367741456364
 seed(myseed)
 
 start = datetime.now()
@@ -27,10 +27,11 @@ def get_related(word):
   # print("getting a word related to {}, chosen from {}".format(word, choices))
   return choices
 
-GENSIM = False
+GENSIM = True
+GENSIM_TAGGED = True
 if GENSIM:
   from gensim.models import Word2Vec
-  model_filepath = join('..', 'model_sentences_raw_words_trigrams_min_count_10_size_200_downsampling_0.001_cbow.bin')
+  model_filepath = join('..', 'model_nyt_sentences_5.5M_tagged_raw_words_trigrams_min_count_10_size_200_downsampling_0.001_cbow.bin'  if GENSIM_TAGGED else 'model_sentences_raw_words_trigrams_min_count_10_size_200_downsampling_0.001_cbow.bin')
   w2v_model = Word2Vec.load(model_filepath)
   cached_synonyms = {}
   def get_related(word):
@@ -92,7 +93,8 @@ ROOT_CHOICES =  (["ROOT_VBD"] * 28 +\
                 ["ROOT_VBP"] * 8 +\
                 ["ROOT_VBG"] * 3 +\
                 ["ROOT_NNS"] * 2 +\
-                ["ROOT_IN"] * 1)
+                ["ROOT_IN"] * 0
+                )
  # ROOT_VBD frequency 28106
  # ROOT_VBZ frequency 14249
  # ROOT_VBN frequency 13773
@@ -112,43 +114,20 @@ def make_sentence_structure():
   return sentence
 
 VECTOR_EVERYTHING = False # setting this option to true sucks!
-def word_for(tag, parent_word):
-  """Find a word with the given tag whose parent word is the given parent word 
-    (or a word related to the given parent word)"""
-  # TODO: theme the word selection with a vector
-  debug = False
-  # TODO: special case <BEGIN> (just use tags_only_model)
-  candidates = tags_parent_words_model.get(parent_word + "|" + tag, None)
-  if debug:
-    print("finding a word with tag {} whose parent is {}".format(tag, parent_word))
-  add = ""
-  if (not candidates or VECTOR_EVERYTHING) and parent_word != '<BEGIN>': 
-    for related_word in get_related(parent_word):
-      candidates = tags_parent_words_model.get(related_word + "|" + tag, None)
-      if candidates: # if we do find one, quit looking.
-        if debug:
-          print("couldn't find one; finding a word related to {} with tag {}".format(related_word, tag))
-        break
-  if not candidates:
-    if debug:
-      print("couldn't find one (or one related to {}); finding a word with tag {}".format(parent_word, tag))
-    candidates = tags_only_model[tag] if tag in tags_only_model else {'*':1}
-    add = "*"
-  word = choice(list(flatten([[cand] * cnt for cand, cnt in candidates.items()])))
-  if debug:
-    print("found {}\n".format(word))
-  return word # + add
 
-def word_for_with_left_sibling(tag, parent_word, left_sibling):
+def word_for(tag, parent_word, **kwargs):
   """Find a word with the given tag whose parent word is..."""
+  left_sibling = kwargs.get('left_sibling', None)
+  parent_tag = kwargs.get('parent_tag', None)
   debug = False
+  add_stuff = False
   candidates = None
   if debug:
     print("finding a word with tag {} whose parent is {} and left_sibling is {}".format(tag, parent_word, left_sibling))
   if left_sibling:
     candidates = tags_parent_words_lsiblings_model.get(parent_word + "|" + left_sibling + "|" + tag, None)
     if not candidates or VECTOR_EVERYTHING: 
-      for related_word in get_related(parent_word):
+      for related_word in get_related(parent_word + (('_' + parent_tag) if GENSIM_TAGGED and parent_tag else '' )):
         candidates =  tags_parent_words_lsiblings_model.get(parent_word + "|" + left_sibling + "|" + tag)
         if candidates:
           if debug:
@@ -160,10 +139,11 @@ def word_for_with_left_sibling(tag, parent_word, left_sibling):
         print("couldn't find a word with that sibling, backing off to just parent/tag")
     candidates = tags_parent_words_model.get(parent_word + "|" + tag, None)
   add = ""
-  if not candidates or VECTOR_EVERYTHING: 
-    for related_word in get_related(parent_word):
+  if (not candidates or VECTOR_EVERYTHING)  and parent_word != '<BEGIN>': 
+    for related_word in get_related(parent_word + (('_' + parent_tag) if GENSIM_TAGGED and parent_tag else '' )):
       candidates = tags_parent_words_model.get(related_word + "|" + tag, None)
       if candidates:
+        add = "*"
         if debug:
           print("couldn't find one; finding a word related to {} with tag {}".format(related_word, tag))
         break
@@ -175,31 +155,36 @@ def word_for_with_left_sibling(tag, parent_word, left_sibling):
   word = choice(list(flatten([[cand] * cnt for cand, cnt in candidates.items()])))
   if debug:
     print("found {}\n".format(word))
-  return word # + add
+  return word + (add if add_stuff else '')
 
 
-def recursively_fill_in_structure(structure, parent_word, left_sibling=None):
+def recursively_fill_in_structure(structure, parent_word, **kwargs):
   root_tag = next((token for token in structure if isinstance(token, str)), None)
   # TODO: condition the choice of (LEFTCHILD, PARENT) and (RIGHTCHILD, PARENT) and (LEFTSIBLING, RIGHTSIBLING)
   # TODO: what if we conditioned each word being chosen on its tag, its parent AND on its parent's left sibling?
   # TODO: what if we conditioned each word being chosen on its tag, its parent AND on the number of right-siblings it has? (to fix intransitive words getting objects)
   # root_word = word_for(root_tag.replace("_left", '').replace("_right", ''), parent_word) # EXPERIMENT, uncomment
-  root_word = word_for_with_left_sibling(root_tag.replace("_left", '').replace("_right", ''), parent_word, left_sibling) # EXPERIMENT
+  root_word = word_for(
+                root_tag.replace("_left", '').replace("_right", ''), 
+                parent_word, 
+                left_sibling=kwargs.get('prev_word', None),
+                parent_tag=kwargs.get('parent_tag', None)
+              )
 
   # return [root_word if isinstance(item, str) else recursively_fill_in_structure(item, root_word) for item in structure]    
   ret = []
-  prev_word = None # EXPERIMENT: left sibling, not sure if useful.
+  prev_word = None
   for item in structure:
     if isinstance(item, str): 
       ret.append(root_word)
       prev_word = None
-    elif len(item) == 1: # EXPERIMENT: left sibling, not sure if useful.
-      this_ret = recursively_fill_in_structure(item, root_word, prev_word) # EXPERIMENT: left sibling, not sure if useful.
-      prev_word = this_ret[0] # EXPERIMENT: left sibling, not sure if useful.
+    else:
+      this_ret = recursively_fill_in_structure(item, 
+                                               root_word, 
+                                               prev_word=prev_word,
+                                               parent_tag=root_tag.split("_")[-1].lower())
+      prev_word = this_ret[0].replace("*", '') if len(item) == 1 else None
       ret.append(this_ret) # EXPERIMENT: left sibling, not sure if useful.
-    else: 
-      prev_word = None
-      ret.append(recursively_fill_in_structure(item, root_word, prev_word))
   return ret
 
 
@@ -213,7 +198,8 @@ if __name__ == "__main__":
 
     filled_in_structure = recursively_fill_in_structure(struct, START)
 
-    print('\n'.join(treeify(struct, filled_in_structure)))
+    # print('\n'.join(treeify(struct, filled_in_structure)))
+
     sentence_tokens = list(flatten(filled_in_structure))
     #print(" ".join(sentence_tokens))
     if TRUECASE:
